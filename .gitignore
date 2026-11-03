@@ -1,0 +1,11 @@
+target/
+.idea/
+*.iml
+.vscode/
+.DS_Store
+.env
+# local lakehouse output from the Spark pipeline
+analytics/lakehouse/
+analytics/sample_data/
+__pycache__/
+.venv/

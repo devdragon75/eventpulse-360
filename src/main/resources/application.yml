@@ -1,0 +1,63 @@
+spring:
+  application:
+    name: eventpulse-360
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/eventpulse?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    username: ${DB_USERNAME:eventpulse}
+    password: ${DB_PASSWORD:eventpulse}
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Flyway owns the schema (see db/migration); Hibernate never touches DDL.
+      ddl-auto: none
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+  data:
+    web:
+      pageable:
+        max-page-size: 100
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        enable.idempotence: true
+    consumer:
+      group-id: eventpulse-notifications
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+eventpulse:
+  jwt:
+    # >= 32 bytes. Override with JWT_SECRET in any real environment.
+    secret: ${JWT_SECRET:dev-only-secret-please-change-dev-only-secret}
+    expiration: 2h
+  admin:
+    name: ${ADMIN_NAME:Platform Admin}
+    email: ${ADMIN_EMAIL:admin@eventpulse.local}
+    password: ${ADMIN_PASSWORD:ChangeMe123!}
+  kafka:
+    enabled: ${KAFKA_ENABLED:false}
+    registration-topic: eventpulse.registrations
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    com.eventpulse: INFO
