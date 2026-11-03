@@ -173,6 +173,10 @@ mvn spring-boot:run
 
 Kafka is **off by default** (`KAFKA_ENABLED=false`); the app is fully functional without it. Set `KAFKA_ENABLED=true` and `KAFKA_BOOTSTRAP_SERVERS` to enable the producer and notification consumer.
 
+### Web UI
+
+A deliberately minimal single-page UI ships with the API (`src/main/resources/static/index.html`, plain HTML + JS, no build step). Open <http://localhost:8080/> to browse events and book a ticket, or use the **Organizer** tab to sign up, create events, add ticket types, publish, see sales and cancel/refund registrations.
+
 ### Configuration
 
 | Variable | Default | Purpose |

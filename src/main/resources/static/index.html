@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EventPulse 360</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #fff; --text: #1b1f27; --muted: #667085; --line: #e3e6eb;
+    --brand: #4f46e5; --brand-text: #fff; --ok: #138a4b; --warn: #b45309; --bad: #c0392b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #12141a; --card: #1b1f27; --text: #eceff4; --muted: #98a2b3; --line: #2b303b; --brand: #818cf8; --brand-text: #12141a; --ok: #4ade80; --warn: #fbbf24; --bad: #f87171; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.45 system-ui, sans-serif; background: var(--bg); color: var(--text); }
+  header { background: var(--card); border-bottom: 1px solid var(--line); }
+  .bar { max-width: 960px; margin: 0 auto; padding: 12px 16px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .brand { font-weight: 700; font-size: 18px; margin-right: auto; }
+  nav button { background: none; border: 0; color: var(--muted); font: inherit; padding: 6px 10px; cursor: pointer; border-radius: 6px; }
+  nav button.on { color: var(--text); background: var(--bg); font-weight: 600; }
+  main { max-width: 960px; margin: 0 auto; padding: 16px; }
+  h2 { margin: 8px 0 12px; font-size: 20px; }
+  h3 { margin: 0 0 4px; font-size: 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .grid { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 2px; }
+  input, select, textarea { width: 100%; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; }
+  button.btn { font: inherit; background: var(--brand); color: var(--brand-text); border: 0; border-radius: 6px; padding: 7px 14px; cursor: pointer; font-weight: 600; }
+  button.btn.ghost { background: none; color: var(--text); border: 1px solid var(--line); font-weight: 500; }
+  button.btn.small { padding: 4px 10px; font-size: 13px; }
+  button.btn:disabled { opacity: .5; cursor: default; }
+  .tag { font-size: 11px; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
+  .tag.PUBLISHED { color: var(--ok); } .tag.DRAFT { color: var(--warn); } .tag.CANCELLED, .tag.REFUNDED { color: var(--bad); }
+  .ticket { display: flex; justify-content: space-between; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); }
+  .stats { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); margin-bottom: 12px; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; }
+  .stat b { display: block; font-size: 22px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  td, th { text-align: left; padding: 5px 6px; border-top: 1px solid var(--line); }
+  #toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); padding: 10px 16px; border-radius: 8px; color: #fff; display: none; max-width: 90vw; z-index: 9; }
+  #toast.ok { background: var(--ok); } #toast.err { background: var(--bad); }
+  .hide { display: none; }
+</style>
+</head>
+<body>
+<header><div class="bar">
+  <span class="brand">EventPulse 360</span>
+  <nav>
+    <button id="nav-events" class="on">Events</button>
+    <button id="nav-org">Organizer</button>
+  </nav>
+  <span id="who" class="muted"></span>
+  <button id="logout" class="btn ghost small hide">Log out</button>
+</div></header>
+
+<main>
+  <section id="view-events">
+    <h2>Upcoming events</h2>
+    <div id="events"><p class="muted">Loading…</p></div>
+  </section>
+
+  <section id="view-org" class="hide">
+    <div id="auth" class="card" style="max-width:420px">
+      <h2>Organizer sign in</h2>
+      <form id="auth-form">
+        <div id="name-wrap" class="hide"><label>Name</label><input id="a-name" autocomplete="name"></div>
+        <label style="margin-top:6px">Email</label><input id="a-email" type="email" required autocomplete="email">
+        <label style="margin-top:6px">Password</label><input id="a-pass" type="password" required minlength="8" autocomplete="current-password">
+        <div class="row" style="margin-top:12px">
+          <button class="btn" id="a-submit">Log in</button>
+          <button type="button" class="btn ghost" id="a-toggle">Create an account</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="dash" class="hide">
+      <div class="stats" id="stats"></div>
+      <div class="row" style="justify-content:space-between"><h2>My events</h2>
+        <button class="btn" id="new-toggle">New event</button></div>
+      <form id="new-event" class="card hide">
+        <div class="grid">
+          <div><label>Title</label><input name="title" required></div>
+          <div><label>Venue</label><input name="venue" required></div>
+          <div><label>Capacity</label><input name="capacity" type="number" min="1" value="100" required></div>
+          <div><label>Starts</label><input name="startsAt" type="datetime-local" required></div>
+          <div><label>Ends</label><input name="endsAt" type="datetime-local" required></div>
+        </div>
+        <label style="margin-top:8px">Description</label><textarea name="description" rows="2"></textarea>
+        <div class="row" style="margin-top:10px"><button class="btn">Create draft</button></div>
+      </form>
+      <div id="mine"></div>
+    </div>
+  </section>
+</main>
+<div id="toast"></div>
+
+<script>
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money = n => '$' + Number(n || 0).toFixed(2);
+const when = iso => new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+
+let token = sessionStorage.getItem('token');
+let me = JSON.parse(sessionStorage.getItem('me') || 'null');
+let signupMode = false;
+
+async function api(path, { method = 'GET', body, auth = false } = {}) {
+  const headers = {};
+  if (body) headers['Content-Type'] = 'application/json';
+  if (auth || token) headers['Authorization'] = 'Bearer ' + token;
+  const res = await fetch(path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  const text = await res.text();
+  const data = text ? JSON.parse(text) : null;
+  if (!res.ok) {
+    if (res.status === 401 && token) logout();
+    const fields = data && data.fieldErrors ? ' (' + Object.entries(data.fieldErrors).map(([k, v]) => k + ': ' + v).join(', ') + ')' : '';
+    throw new Error((data && data.message || res.statusText) + fields);
+  }
+  return data;
+}
+
+let toastTimer;
+function toast(msg, ok = true) {
+  const t = $('#toast'); t.textContent = msg; t.className = ok ? 'ok' : 'err'; t.style.display = 'block';
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.style.display = 'none', 4000);
+}
+const guard = fn => async (...a) => { try { await fn(...a); } catch (e) { toast(e.message, false); } };
+
+// ---------- navigation / auth ----------
+function show(view) {
+  $('#view-events').classList.toggle('hide', view !== 'events');
+  $('#view-org').classList.toggle('hide', view !== 'org');
+  $('#nav-events').classList.toggle('on', view === 'events');
+  $('#nav-org').classList.toggle('on', view === 'org');
+  if (view === 'events') loadEvents(); else renderOrganizer();
+}
+$('#nav-events').onclick = () => show('events');
+$('#nav-org').onclick = () => show('org');
+
+function setSession(auth) {
+  token = auth.token; me = { name: auth.name, role: auth.role };
+  sessionStorage.setItem('token', token); sessionStorage.setItem('me', JSON.stringify(me));
+}
+function logout() {
+  token = null; me = null; sessionStorage.clear();
+  renderOrganizer();
+}
+$('#logout').onclick = () => { logout(); toast('Logged out'); };
+
+$('#a-toggle').onclick = () => {
+  signupMode = !signupMode;
+  $('#name-wrap').classList.toggle('hide', !signupMode);
+  $('#a-name').required = signupMode;
+  $('#a-submit').textContent = signupMode ? 'Sign up' : 'Log in';
+  $('#a-toggle').textContent = signupMode ? 'I have an account' : 'Create an account';
+};
+$('#auth-form').onsubmit = guard(async e => {
+  e.preventDefault();
+  const body = { email: $('#a-email').value, password: $('#a-pass').value };
+  if (signupMode) body.name = $('#a-name').value;
+  setSession(await api(signupMode ? '/api/auth/signup' : '/api/auth/login', { method: 'POST', body }));
+  $('#a-pass').value = '';
+  renderOrganizer();
+});
+
+// ---------- public events ----------
+const loadEvents = guard(async () => {
+  const page = await api('/api/events?size=50');
+  const box = $('#events');
+  if (!page.content.length) { box.innerHTML = '<p class="muted">No published events yet. Create and publish one in the Organizer tab.</p>'; return; }
+  box.innerHTML = '';
+  for (const ev of page.content) {
+    const tickets = await api(`/api/events/${ev.id}/ticket-types`);
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="row" style="justify-content:space-between"><h3>${esc(ev.title)}</h3><span class="muted">${esc(ev.venue)}</span></div>
+      <div class="muted">${when(ev.startsAt)} → ${when(ev.endsAt)} · by ${esc(ev.organizerName)}</div>
+      ${ev.description ? `<p>${esc(ev.description)}</p>` : ''}
+      ${tickets.map(t => `<div class="ticket"><span>${esc(t.name)} · ${money(t.price)}</span>
+        <span class="muted">${t.remaining > 0 ? t.remaining + ' left' : 'Sold out'}</span></div>`).join('')}
+      <form class="grid" style="margin-top:10px">
+        <div><label>Ticket</label><select name="ticket">${tickets.map(t => `<option value="${t.id}" ${t.remaining ? '' : 'disabled'}>${esc(t.name)} (${money(t.price)})</option>`).join('')}</select></div>
+        <div><label>Your name</label><input name="name" required></div>
+        <div><label>Email</label><input name="email" type="email" required></div>
+        <div style="align-self:end"><button class="btn">Register</button></div>
+      </form>`;
+    $('form', card).onsubmit = guard(async e => {
+      e.preventDefault();
+      const f = e.target;
+      const r = await api(`/api/events/${ev.id}/registrations`, { method: 'POST',
+        body: { ticketTypeId: Number(f.ticket.value), attendeeName: f.name.value, attendeeEmail: f.email.value } });
+      toast(`Booked! Ticket code ${r.ticketCode}`);
+      f.reset(); loadEvents();
+    });
+    box.appendChild(card);
+  }
+});
+
+// ---------- organizer ----------
+function renderOrganizer() {
+  $('#who').textContent = me ? `${me.name} (${me.role})` : '';
+  $('#logout').classList.toggle('hide', !me);
+  $('#auth').classList.toggle('hide', !!me);
+  $('#dash').classList.toggle('hide', !me);
+  if (me) loadDashboard();
+}
+
+const loadDashboard = guard(async () => {
+  const [o, mine] = await Promise.all([api('/api/analytics/overview'), api('/api/me/events?size=50')]);
+  $('#stats').innerHTML = [
+    ['Events', o.totalEvents], ['Published', o.publishedEvents],
+    ['Registrations', o.confirmedRegistrations], ['Net revenue', money(o.netRevenue)], ['Refunded', money(o.refunded)],
+  ].map(([k, v]) => `<div class="stat"><span class="muted">${k}</span><b>${esc(v)}</b></div>`).join('');
+
+  const box = $('#mine');
+  box.innerHTML = mine.content.length ? '' : '<p class="muted">No events yet. Click “New event”.</p>';
+  for (const ev of mine.content) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="row" style="justify-content:space-between"><h3>${esc(ev.title)}</h3><span class="tag ${ev.status}">${ev.status}</span></div>
+      <div class="muted">${when(ev.startsAt)} · ${esc(ev.venue)} · capacity ${ev.capacity}</div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn small" data-a="details">Tickets & sales</button>
+        ${ev.status === 'DRAFT' ? '<button class="btn small" data-a="publish">Publish</button>' : ''}
+        ${ev.status !== 'CANCELLED' ? '<button class="btn ghost small" data-a="cancel">Cancel event</button>' : ''}
+      </div>
+      <div class="details hide" style="margin-top:10px"></div>`;
+    const details = $('.details', card);
+    card.onclick = guard(async e => {
+      const a = e.target.dataset && e.target.dataset.a;
+      if (!a) return;
+      if (a === 'publish') { await api(`/api/events/${ev.id}/publish`, { method: 'POST' }); toast('Published'); loadDashboard(); }
+      if (a === 'cancel' && confirm('Cancel this event?')) { await api(`/api/events/${ev.id}/cancel`, { method: 'POST' }); loadDashboard(); }
+      if (a === 'details') { details.classList.toggle('hide'); if (!details.classList.contains('hide')) renderDetails(ev, details); }
+    });
+    box.appendChild(card);
+  }
+});
+
+const renderDetails = guard(async (ev, el) => {
+  const [a, regs] = await Promise.all([api(`/api/analytics/events/${ev.id}`), api(`/api/events/${ev.id}/registrations?size=50`)]);
+  el.innerHTML = `
+    <div class="stats">
+      <div class="stat"><span class="muted">Sold / capacity</span><b>${a.ticketsSold} / ${a.capacity}</b></div>
+      <div class="stat"><span class="muted">Occupancy</span><b>${a.occupancyPercent}%</b></div>
+      <div class="stat"><span class="muted">Net revenue</span><b>${money(a.netRevenue)}</b></div>
+      <div class="stat"><span class="muted">Cancellations</span><b>${a.cancelledRegistrations}</b></div>
+    </div>
+    ${a.byTicketType.map(t => `<div class="ticket"><span>${esc(t.name)} · ${money(t.price)}</span><span class="muted">${t.sold}/${t.quantity} sold · ${money(t.revenue)}</span></div>`).join('')}
+    <form class="grid add-ticket" style="margin:10px 0">
+      <div><label>New ticket type</label><input name="name" placeholder="General" required></div>
+      <div><label>Price</label><input name="price" type="number" step="0.01" min="0" required></div>
+      <div><label>Quantity</label><input name="quantity" type="number" min="1" required></div>
+      <div style="align-self:end"><button class="btn small">Add</button></div>
+    </form>
+    <h3>Registrations</h3>
+    ${regs.content.length ? `<table><tr><th>Attendee</th><th>Ticket</th><th>Status</th><th>Paid</th><th></th></tr>
+      ${regs.content.map(r => `<tr><td>${esc(r.attendeeName)}<br><span class="muted">${esc(r.attendeeEmail)}</span></td>
+        <td>${esc(r.ticketType)}</td><td><span class="tag ${r.status === 'CANCELLED' ? 'CANCELLED' : 'PUBLISHED'}">${r.status}</span></td>
+        <td>${money(r.amount)} <span class="tag ${r.paymentStatus}">${r.paymentStatus}</span></td>
+        <td>${r.status === 'CONFIRMED' ? `<button class="btn ghost small" data-cancel="${r.id}">Cancel & refund</button>` : ''}</td></tr>`).join('')}</table>`
+      : '<p class="muted">No registrations yet.</p>'}`;
+  $('.add-ticket', el).onsubmit = guard(async e => {
+    e.preventDefault(); const f = e.target;
+    await api(`/api/events/${ev.id}/ticket-types`, { method: 'POST',
+      body: { name: f.name.value, price: Number(f.price.value), quantity: Number(f.quantity.value) } });
+    toast('Ticket type added'); renderDetails(ev, el);
+  });
+  el.onclick = guard(async e => {
+    const id = e.target.dataset && e.target.dataset.cancel;
+    if (id && confirm('Cancel this registration and refund it?')) {
+      await api(`/api/registrations/${id}/cancel`, { method: 'POST' }); toast('Cancelled and refunded');
+      renderDetails(ev, el); loadDashboard();
+    }
+  });
+});
+
+$('#new-toggle').onclick = () => $('#new-event').classList.toggle('hide');
+$('#new-event').onsubmit = guard(async e => {
+  e.preventDefault(); const f = e.target;
+  await api('/api/events', { method: 'POST', body: {
+    title: f.title.value, venue: f.venue.value, description: f.description.value, capacity: Number(f.capacity.value),
+    startsAt: new Date(f.startsAt.value).toISOString(), endsAt: new Date(f.endsAt.value).toISOString() } });
+  f.reset(); f.classList.add('hide'); toast('Draft created - add tickets, then publish'); loadDashboard();
+});
+
+loadEvents();
+renderOrganizer();
+</script>
+</body>
+</html>

@@ -76,6 +76,11 @@ class EventPulseApiTest {
     }
 
     @Test
+    void bundledUiIsServedWithoutLogin() throws Exception {
+        mvc.perform(get("/")).andExpect(status().isOk());
+    }
+
+    @Test
     void registrationIsRejectedForDraftEvents() throws Exception {
         String token = signup("Dana");
         long eventId = createEvent(token, 10);
